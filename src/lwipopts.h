@@ -7,21 +7,22 @@
 // This example uses a common include to avoid repetition
 #include "lwipopts_examples_common.h"
 
-/* TCP WND must be at least 16 kb to match TLS record size
-   or you will get a warning "altcp_tls: TCP_WND is smaller than the RX decrypion buffer, connection RX might stall!" */
-#undef TCP_WND
-#define TCP_WND 16384
+// The following is needed to test mDns
+#define LWIP_MDNS_RESPONDER 1
+#define LWIP_IGMP 1
+#define LWIP_NUM_NETIF_CLIENT_DATA 1
+#define MDNS_RESP_USENETIF_EXTCALLBACK  1
+#define MEMP_NUM_SYS_TIMEOUT (LWIP_NUM_SYS_TIMEOUT_INTERNAL + 3)
+#define MEMP_NUM_TCP_PCB 12
 
-#define LWIP_ALTCP 1
+// Enable some httpd features
+#define LWIP_HTTPD_CGI 1
+#define LWIP_HTTPD_SSI 1
+#define LWIP_HTTPD_SSI_MULTIPART 1
+#define LWIP_HTTPD_SUPPORT_POST 1
+#define LWIP_HTTPD_SSI_INCLUDE_TAG 0
 
-// If you don't want to use TLS (just a http request) you can avoid linking to mbedtls and remove the following
-#define LWIP_ALTCP_TLS 1
-#define LWIP_ALTCP_TLS_MBEDTLS 1
-
-// Note bug in lwip with LWIP_ALTCP and LWIP_DEBUG
-// https://savannah.nongnu.org/bugs/index.php?62159
-// #define LWIP_DEBUG 1
-#undef LWIP_DEBUG
-#define ALTCP_MBEDTLS_DEBUG LWIP_DBG_ON
+// Generated file containing html data
+#define HTTPD_FSDATA_FILE "pico_fsdata.inc"
 
 #endif
