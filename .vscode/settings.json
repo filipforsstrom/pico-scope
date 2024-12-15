@@ -1,0 +1,35 @@
+{
+	"cmake.options.statusBarVisibility": "hidden",
+	"cmake.options.advanced": {
+		"build": {
+			"statusBarVisibility": "hidden"
+		},
+		"launch": {
+			"statusBarVisibility": "hidden"
+		},
+		"debug": {
+			"statusBarVisibility": "hidden"
+		}
+	},
+	"cmake.configureOnEdit": true,
+	"cmake.automaticReconfigure": true,
+	"cmake.configureOnOpen": true,
+	"cmake.generator": "Ninja",
+	"cmake.cmakePath": "${env:CMAKE_PATH}",
+	"C_Cpp.debugShortcut": false,
+	// "terminal.integrated.env.linux": {
+	//     "PICO_SDK_PATH": "${env:HOME}/.pico-sdk/sdk/2.0.0",
+	//     "PICO_TOOLCHAIN_PATH": "${env:HOME}/.pico-sdk/toolchain/13_2_Rel1",
+	//     "PATH": "${env:HOME}/.pico-sdk/toolchain/13_2_Rel1/bin:${env:HOME}/.pico-sdk/picotool/2.0.0/picotool:${env:HOME}/.pico-sdk/cmake/v3.28.6/bin:${env:HOME}/.pico-sdk/ninja/v1.12.1:${env:PATH}"
+	// },
+	"raspberry-pi-pico.cmakeAutoConfigure": false,
+	"raspberry-pi-pico.useCmakeTools": true,
+	"raspberry-pi-pico.cmakePath": "${env:CMAKE_PATH}",
+	"raspberry-pi-pico.ninjaPath": "${env:NINJA_PATH}",
+	"files.associations": {
+		"stdlib.h": "c",
+		"pico.h": "c",
+		"pwm.h": "c",
+		"pio.h": "c"
+	}
+}
