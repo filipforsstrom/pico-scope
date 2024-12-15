@@ -6,8 +6,8 @@ char myBuff[1000];
 
 #define DEBUG_printf printf
 
-#define HOST "192.168.1.204:5010"
-#define URL_REQUEST "/ping"
+const ip_addr_t SERVER_IP = IPADDR4_INIT_BYTES(192, 168, 1, 204);
+#define SERVER_PORT 5010
 
 int setup_wifi()
 {
@@ -71,16 +71,13 @@ int main()
 
 	setup_wifi();
 
-	ip_addr_t ip;
-	IP4_ADDR(&ip, 192, 168, 1, 204);
-	uint16_t port = 5010;
 	httpc_connection_t settings;
 	settings.result_fn = result;
 	settings.headers_done_fn = headers;
 
 	err_t err = httpc_get_file(
-		&ip,
-		port,
+		&SERVER_IP,
+		SERVER_PORT,
 		"/ping",
 		&settings,
 		body,
