@@ -25,6 +25,14 @@ int setup_wifi()
 		return 2;
 	}
 	DEBUG_printf("Connected to %s\n", WIFI_SSID);
+	DEBUG_printf("IP: %s\n",
+				 ip4addr_ntoa(netif_ip_addr4(netif_default)));
+	DEBUG_printf("Mask: %s\n",
+				 ip4addr_ntoa(netif_ip_netmask4(netif_default)));
+	DEBUG_printf("Gateway: %s\n",
+				 ip4addr_ntoa(netif_ip_gw4(netif_default)));
+	DEBUG_printf("Host Name: %s\n",
+				 netif_get_hostname(netif_default));
 }
 
 void result(void *arg, httpc_result_t httpc_result,
