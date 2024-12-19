@@ -2,12 +2,80 @@
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 #include "lwip/apps/http_client.h"
+#include "lwip/tcp.h"
 char myBuff[1000];
 
 #define DEBUG_printf printf
 
 const ip_addr_t SERVER_IP = IPADDR4_INIT_BYTES(192, 168, 15, 104);
 #define SERVER_PORT 5010
+
+struct tcp_pcb *tcp_client_pcb;
+
+// Callback functions
+err_t tcp_client_connected(void *arg, struct tcp_pcb *tpcb, err_t err);
+err_t tcp_client_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
+void tcp_client_err(void *arg, err_t err);
+
+// Function to set up a TCP connection
+void tcp_setup(void)
+{
+	ip_addr_t server_ip;
+	IP4_ADDR(&server_ip, 192, 168, 15, 104); // Server IP address
+
+	tcp_client_pcb = tcp_new();
+	tcp_bind(tcp_client_pcb, IP_ADDR_ANY, 0);
+	tcp_client_pcb->so_options |= SOF_KEEPALIVE;
+	tcp_err(tcp_client_pcb, tcp_client_err);
+	tcp_connect(tcp_client_pcb, &server_ip, SERVER_PORT, tcp_client_connected);
+}
+
+// Function to send an HTTP request
+void tcp_send_request(struct tcp_pcb *tpcb)
+{
+	const char *request = "HEAD /ping HTTP/1.0\r\nHost: 192.168.15.104\r\n\r\n";
+	err_t err = tcp_write(tpcb, request, strlen(request), TCP_WRITE_FLAG_COPY);
+	if (err == ERR_OK)
+	{
+		tcp_output(tpcb);
+	}
+}
+
+// Callback when connection is established
+err_t tcp_client_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
+{
+	if (err == ERR_OK)
+	{
+		tcp_recv(tpcb, tcp_client_recv);
+		tcp_send_request(tpcb);
+	}
+	else
+	{
+		tcp_close(tpcb);
+	}
+	return ERR_OK;
+}
+
+// Callback when data is received
+err_t tcp_client_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
+{
+	if (p != NULL)
+	{
+		// Process received data
+		pbuf_free(p);
+	}
+	else
+	{
+		tcp_close(tpcb);
+	}
+	return ERR_OK;
+}
+
+// Error callback
+void tcp_client_err(void *arg, err_t err)
+{
+	// Handle error
+}
 
 int setup_wifi()
 {
@@ -35,61 +103,12 @@ int setup_wifi()
 				 netif_get_hostname(netif_default));
 }
 
-void result(void *arg, httpc_result_t httpc_result,
-			u32_t rx_content_len, u32_t srv_res, err_t err)
-
-{
-	printf("transfer complete\n");
-	printf("local result=%d\n", httpc_result);
-	printf("http result=%d\n", srv_res);
-}
-
-err_t headers(httpc_state_t *connection, void *arg,
-			  struct pbuf *hdr, u16_t hdr_len, u32_t content_len)
-{
-	printf("headers recieved\n");
-	printf("content length=%d\n", content_len);
-	printf("header length %d\n", hdr_len);
-	pbuf_copy_partial(hdr, myBuff, hdr->tot_len, 0);
-	printf("headers \n");
-	printf("%s", myBuff);
-	return ERR_OK;
-}
-
-err_t body(void *arg, struct altcp_pcb *conn,
-		   struct pbuf *p, err_t err)
-{
-	printf("body\n");
-
-	// Ensure we don't overflow myBuff
-	size_t len = p->tot_len < sizeof(myBuff) - 1 ? p->tot_len : sizeof(myBuff) - 1;
-	pbuf_copy_partial(p, myBuff, len, 0);
-	myBuff[len] = '\0'; // Null-terminate the buffer
-
-	printf("%s\n", myBuff);
-	return ERR_OK;
-}
-
 int main()
 {
 	stdio_init_all();
 
 	setup_wifi();
-
-	httpc_connection_t settings;
-	settings.result_fn = result;
-	settings.headers_done_fn = headers;
-
-	err_t err = httpc_get_file(
-		&SERVER_IP,
-		SERVER_PORT,
-		"/ping",
-		&settings,
-		body,
-		NULL,
-		NULL);
-
-	printf("status %d \n", err);
+	tcp_setup();
 
 	while (true)
 	{
