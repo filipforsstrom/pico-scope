@@ -6,7 +6,7 @@ char myBuff[1000];
 
 #define DEBUG_printf printf
 
-const ip_addr_t SERVER_IP = IPADDR4_INIT_BYTES(192, 168, 1, 204);
+const ip_addr_t SERVER_IP = IPADDR4_INIT_BYTES(192, 168, 15, 104);
 #define SERVER_PORT 5010
 
 int setup_wifi()
@@ -19,10 +19,10 @@ int setup_wifi()
 
 	cyw43_arch_enable_sta_mode();
 
-	if (cyw43_arch_wifi_connect_blocking(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK))
+	while (cyw43_arch_wifi_connect_blocking(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK))
 	{
-		DEBUG_printf("Failed to connect to %s\n", WIFI_SSID);
-		return 2;
+		DEBUG_printf("Failed to connect to %s, retrying...\n", WIFI_SSID);
+		sleep_ms(1000);
 	}
 	DEBUG_printf("Connected to %s\n", WIFI_SSID);
 	DEBUG_printf("IP: %s\n",
@@ -60,8 +60,13 @@ err_t body(void *arg, struct altcp_pcb *conn,
 		   struct pbuf *p, err_t err)
 {
 	printf("body\n");
-	pbuf_copy_partial(p, myBuff, p->tot_len, 0);
-	printf("%s", myBuff);
+
+	// Ensure we don't overflow myBuff
+	size_t len = p->tot_len < sizeof(myBuff) - 1 ? p->tot_len : sizeof(myBuff) - 1;
+	pbuf_copy_partial(p, myBuff, len, 0);
+	myBuff[len] = '\0'; // Null-terminate the buffer
+
+	printf("%s\n", myBuff);
 	return ERR_OK;
 }
 
