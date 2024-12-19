@@ -33,7 +33,12 @@ void tcp_setup(void)
 // Function to send an HTTP request
 void tcp_send_request(struct tcp_pcb *tpcb)
 {
-	const char *request = "HEAD /ping HTTP/1.0\r\nHost: 192.168.15.104\r\n\r\n";
+	const char *request = "GET /ws HTTP/1.1\r\n"
+						  "Host: 192.168.15.104\r\n"
+						  "Upgrade: websocket\r\n"
+						  "Connection: Upgrade\r\n"
+						  "Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==\r\n"
+						  "Sec-WebSocket-Version: 13\r\n\r\n";
 	err_t err = tcp_write(tpcb, request, strlen(request), TCP_WRITE_FLAG_COPY);
 	if (err == ERR_OK)
 	{
