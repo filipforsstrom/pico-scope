@@ -8,7 +8,7 @@ char myBuff[1000];
 
 #define DEBUG_printf printf
 
-const ip_addr_t SERVER_IP = IPADDR4_INIT_BYTES(192, 168, 15, 104);
+const ip_addr_t SERVER_IP = IPADDR4_INIT_BYTES(192, 168, 1, 204);
 #define SERVER_PORT 5010
 
 struct tcp_pcb *tcp_client_pcb;
@@ -23,7 +23,7 @@ void tcp_client_err(void *arg, err_t err);
 err_t tcp_setup(void)
 {
 	ip_addr_t server_ip;
-	IP4_ADDR(&server_ip, 192, 168, 15, 104); // Server IP address
+	IP4_ADDR(&server_ip, 192, 168, 1, 204); // Server IP address
 
 	tcp_client_pcb = tcp_new();
 	tcp_bind(tcp_client_pcb, IP_ADDR_ANY, 0);
@@ -37,7 +37,7 @@ err_t tcp_setup(void)
 void tcp_send_request(struct tcp_pcb *tpcb)
 {
 	const char *request = "GET /ws HTTP/1.1\r\n"
-						  "Host: 192.168.15.104\r\n"
+						  "Host: 192.168.1.204\r\n"
 						  "Upgrade: websocket\r\n"
 						  "Connection: Upgrade\r\n"
 						  "Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==\r\n"
