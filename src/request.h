@@ -80,12 +80,11 @@ struct connectionState *newConnection(char *sendData, char *recvData)
 	return cs;
 }
 
-struct connectionState *doRequest(ip_addr_t *ip, char *host, u16_t port, char *request, char *file, char *sendData, char *recvData)
+struct connectionState *doRequest(ip_addr_t *ip, char *host, u16_t port, char *header, char *sendData, char *recvData)
 {
-	char headerTemplate[] = "%s %s HTTP/1.1\r\nHOST:%s:%d\r\nConnection: close\r\nContent-length: %d\r\n\r\n%s";
-	int len = snprintf(NULL, 0, headerTemplate, request, file, host, port, strlen(sendData), sendData);
+	int len = strlen(header) + strlen(sendData);
 	char *requestData = malloc(len + 1);
-	snprintf(requestData, len + 1, headerTemplate, request, file, host, port, strlen(sendData), sendData);
+	snprintf(requestData, len + 1, "%s%s", header, sendData);
 	struct connectionState *cs = newConnection(requestData, recvData);
 	cyw43_arch_lwip_begin();
 	err_t err = altcp_connect(cs->pcb, ip, port, connected);

@@ -22,7 +22,8 @@ int main()
 	ip_addr_t ip;
 	IP4_ADDR(&ip, 192, 168, 1, 204);
 
-	struct connectionState *cs = doRequest(&ip, "192.168.1.204", 5010, "GET", "/ping", NULL, myBuff1);
+	char pingHeader[] = "GET /ping HTTP/1.1\r\nHOST:192.168.1.204\r\nConnection: close\r\n\r\n";
+	struct connectionState *cs = doRequest(&ip, "192.168.1.204", 5010, pingHeader, "", myBuff1);
 
 	while (pollRequest(&cs))
 	{
@@ -30,6 +31,19 @@ int main()
 	}
 	printf("Buffer=%s\n", myBuff1);
 
+	char wsHeader[] = "GET /ws HTTP/1.1\r\n"
+					  "Host: 192.168.1.204\r\n"
+					  "Upgrade: websocket\r\n"
+					  "Connection: Upgrade\r\n"
+					  "Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==\r\n"
+					  "Sec-WebSocket-Version: 13\r\n\r\n";
+	cs = doRequest(&ip, "192.168.1.204", 5010, wsHeader, "", myBuff1);
+
+	while (pollRequest(&cs))
+	{
+		sleep_ms(200);
+	}
+	printf("Buffer=%s\n", myBuff1);
 
 	// while (true)
 	// {
