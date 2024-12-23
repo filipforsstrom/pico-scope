@@ -5,9 +5,21 @@
 #include "pico/cyw43_arch.h"
 #include "lwip/altcp.h"
 
+enum states
+{
+	NOT_CONNECTED = 0,
+	CONNECTING,
+	CONNECTED,
+	UPGRADED,
+	REQUEST_PENDING,
+	INITIAL_DATA_PACKET,
+	WAITING_MORE_DATA,
+	DATA_READY
+};
+
 struct connectionState
 {
-	int state;
+	enum states state;
 	struct altcp_pcb *pcb;
 	char *sendData;
 	char *recvData;
@@ -30,14 +42,14 @@ err_t recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err)
 			pbuf_copy_partial(p, (cs->recvData) + (cs->start), p->tot_len, 0);
 			cs->start += p->tot_len;
 			cs->recvData[cs->start] = 0;
-			cs->state = 4;
+			cs->state = INITIAL_DATA_PACKET;
 			altcp_recved(pcb, p->tot_len);
 		}
 		pbuf_free(p);
 	}
 	else
 	{
-		cs->state = 6;
+		cs->state = DATA_READY;
 	}
 	return ERR_OK;
 }
@@ -45,7 +57,7 @@ err_t recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err)
 static err_t connected(void *arg, struct altcp_pcb *pcb, err_t err)
 {
 	struct connectionState *cs = (struct connectionState *)arg;
-	cs->state = 2;
+	cs->state = CONNECTED;
 	return ERR_OK;
 }
 
@@ -53,7 +65,7 @@ err_t poll(void *arg, struct altcp_pcb *pcb)
 {
 	printf("Connection Closed \n");
 	struct connectionState *cs = (struct connectionState *)arg;
-	cs->state = 6;
+	cs->state = DATA_READY;
 }
 
 void err(void *arg, err_t err)
@@ -67,7 +79,7 @@ void err(void *arg, err_t err)
 struct connectionState *newConnection(char *sendData, char *recvData)
 {
 	struct connectionState *cs = (struct connectionState *)malloc(sizeof(struct connectionState));
-	cs->state = 0;
+	cs->state = NOT_CONNECTED;
 	cs->pcb = altcp_new(NULL);
 	altcp_recv(cs->pcb, recv);
 	altcp_sent(cs->pcb, sent);
@@ -89,7 +101,7 @@ struct connectionState *doRequest(ip_addr_t *ip, char *host, u16_t port, char *h
 	cyw43_arch_lwip_begin();
 	err_t err = altcp_connect(cs->pcb, ip, port, connected);
 	cyw43_arch_lwip_end();
-	cs->state = 1;
+	cs->state = CONNECTING;
 	return cs;
 }
 
@@ -100,22 +112,22 @@ int pollRequest(struct connectionState **pcs)
 	struct connectionState *cs = *pcs;
 	switch (cs->state)
 	{
-	case 0:
-	case 1:
-	case 3:
+	case NOT_CONNECTED:
+	case CONNECTING:
+	case REQUEST_PENDING:
 		break;
 
-	case 2:
-		cs->state = 3;
+	case CONNECTED:
+		cs->state = REQUEST_PENDING;
 		cyw43_arch_lwip_begin();
 		err_t err = altcp_write(cs->pcb, cs->sendData, strlen(cs->sendData), 0);
 		err = altcp_output(cs->pcb);
 		cyw43_arch_lwip_end();
 		break;
-	case 4:
-		cs->state = 5;
+	case INITIAL_DATA_PACKET:
+		cs->state = WAITING_MORE_DATA;
 		break;
-	case 6:
+	case DATA_READY:
 		cyw43_arch_lwip_begin();
 		altcp_close(cs->pcb);
 		cyw43_arch_lwip_end();
