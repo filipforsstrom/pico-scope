@@ -28,9 +28,6 @@ endif()
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
-# Set the picotool_DIR variable
-# set(picotool_DIR $ENV{PICO_SDK_PATH}/../picotool) # What is this for?
-
 set(PROJECT_NAME pico-scope)
 
 project(${PROJECT_NAME} C CXX ASM)
@@ -38,7 +35,7 @@ project(${PROJECT_NAME} C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-add_executable(${PROJECT_NAME} src/main.c )
+add_executable(${PROJECT_NAME} src/main.c)
 
 pico_set_program_name(${PROJECT_NAME} "pico-scope")
 pico_set_program_version(${PROJECT_NAME} "0.1")
@@ -49,17 +46,16 @@ pico_enable_stdio_usb(${PROJECT_NAME} 0)
 
 # Add the standard include files to the build
 target_include_directories(${PROJECT_NAME} PRIVATE
-	${CMAKE_CURRENT_LIST_DIR}
-	${CMAKE_CURRENT_LIST_DIR}/src
-	)
+    ${CMAKE_CURRENT_LIST_DIR}
+    ${CMAKE_CURRENT_LIST_DIR}/src
+    )
 
 # Add any user requested libraries
 target_link_libraries(${PROJECT_NAME} 
-	pico_stdlib
-	# pico_cyw43_arch_none
-	pico_cyw43_arch_lwip_threadsafe_background
-	pico_lwip_http
-	)
+    pico_stdlib
+    pico_cyw43_arch_lwip_threadsafe_background
+    pico_lwip_http
+    )
 
 pico_add_extra_outputs(${PROJECT_NAME})
 

@@ -4,6 +4,7 @@
 #include "lwip/apps/http_client.h"
 #include "lwip/tcp.h"
 #include <stdlib.h> // For rand()
+#include "setupWifi.h"
 char myBuff[1000];
 
 #define DEBUG_printf printf
@@ -105,37 +106,11 @@ void send_ws(struct tcp_pcb *tpcb)
 	DEBUG_printf("Sent: %f\n", random_value);
 }
 
-int setup_wifi()
-{
-	if (cyw43_arch_init_with_country(CYW43_COUNTRY_SWEDEN))
-	{
-		DEBUG_printf("Failed to initialise CYW43\n");
-		return 1;
-	}
-
-	cyw43_arch_enable_sta_mode();
-
-	while (cyw43_arch_wifi_connect_blocking(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK))
-	{
-		DEBUG_printf("Failed to connect to %s, retrying...\n", WIFI_SSID);
-		sleep_ms(1000);
-	}
-	DEBUG_printf("Connected to %s\n", WIFI_SSID);
-	DEBUG_printf("IP: %s\n",
-				 ip4addr_ntoa(netif_ip_addr4(netif_default)));
-	DEBUG_printf("Mask: %s\n",
-				 ip4addr_ntoa(netif_ip_netmask4(netif_default)));
-	DEBUG_printf("Gateway: %s\n",
-				 ip4addr_ntoa(netif_ip_gw4(netif_default)));
-	DEBUG_printf("Host Name: %s\n",
-				 netif_get_hostname(netif_default));
-}
-
 int main()
 {
 	stdio_init_all();
 
-	setup_wifi();
+	connect(WIFI_SSID, WIFI_PASSWORD);
 
 	err_t err = tcp_setup();
 	if (err == ERR_OK)
