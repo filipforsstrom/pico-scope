@@ -44,6 +44,13 @@ err_t recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err)
 			cs->recvData[cs->start] = 0;
 			cs->state = INITIAL_DATA_PACKET;
 			altcp_recved(pcb, p->tot_len);
+
+			// Check for "101 Switching Protocols"
+			if (strncmp(cs->recvData, "HTTP/1.1 101", 12) == 0)
+			{
+				printf("Switching to WebSocket\n");
+				cs->state = UPGRADED;
+			}
 		}
 		pbuf_free(p);
 	}
@@ -114,6 +121,7 @@ int pollRequest(struct connectionState **pcs)
 	{
 	case NOT_CONNECTED:
 	case CONNECTING:
+	case UPGRADED:
 	case REQUEST_PENDING:
 		break;
 
