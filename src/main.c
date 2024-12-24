@@ -1,65 +1,41 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
+#include "lwip/pbuf.h"
+#include "lwip/udp.h"
 #include "setupWifi.h"
-#include "lwip/altcp.h"
-
-#include "request.h"
-
-#define BUF_SIZE 4096
-char myBuff1[BUF_SIZE];
-
-int readTemp()
-{
-	return 33;
-}
 
 int main()
 {
 	stdio_init_all();
 	connect(WIFI_SSID, WIFI_PASSWORD);
 
+	srand(time(NULL));
+
+	struct udp_pcb *pcb = udp_new();
+	udp_bind(pcb, IP_ADDR_ANY, 8080);
+
 	ip_addr_t ip;
-	IP4_ADDR(&ip, 192, 168, 1, 204);
+	IP4_ADDR(&ip, 192, 168, 15, 104);
 
-	char pingHeader[] = "GET /ping HTTP/1.1\r\nHOST:192.168.1.204\r\nConnection: close\r\n\r\n";
-	struct connectionState *cs = doRequest(&ip, "192.168.1.204", 5010, pingHeader, "", myBuff1);
+	udp_connect(pcb, &ip, 11000);
 
-	while (pollRequest(&cs))
+	char message[32];
+	while (true)
 	{
-		sleep_ms(200);
+		float random_value = (float)rand() / (float)(RAND_MAX);
+		snprintf(message, sizeof(message), "%f", random_value);
+
+		struct pbuf *p = pbuf_alloc(PBUF_TRANSPORT, strlen(message) + 1, PBUF_RAM);
+
+		snprintf(p->payload, strlen(message) + 1, "%s", message);
+
+		err_t er = udp_sendto(pcb, p, &ip, 11000);
+		pbuf_free(p);
+
+		sleep_ms(10);
 	}
-	printf("Buffer=%s\n", myBuff1);
-
-	char wsHeader[] = "GET /ws HTTP/1.1\r\n"
-					  "Host: 192.168.1.204\r\n"
-					  "Upgrade: websocket\r\n"
-					  "Connection: Upgrade\r\n"
-					  "Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==\r\n"
-					  "Sec-WebSocket-Version: 13\r\n\r\n";
-	cs = doRequest(&ip, "192.168.1.204", 5010, wsHeader, "", myBuff1);
-
-	while (pollRequest(&cs))
-	{
-		sleep_ms(200);
-	}
-	printf("Buffer=%s\n", myBuff1);
-
-	// while (true)
-	// {
-	// 	int t = readTemp();
-	// 	int len = snprintf(NULL, 0, "%d", t);
-	// 	char *requestData = malloc(len + 1);
-	// 	snprintf(requestData, len + 1, "%d", t);
-	// 	printf("%s\n", requestData);
-	// 	struct connectionState *cs1 = doRequest(&ip, "192.168.1.204", 5010, "PUT", "/store", requestData, myBuff1);
-	// 	while (pollRequest(&cs1))
-	// 	{
-	// 		sleep_ms(200);
-	// 	}
-	// 	printf("%s\n", myBuff1);
-	// 	sleep_ms(5000);
-	// }
-	cyw43_arch_deinit();
-	return 0;
 }
