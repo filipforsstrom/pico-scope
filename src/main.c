@@ -13,9 +13,9 @@ uint port = 11000;
 
 struct Payload
 {
-	uint32_t sequence_number; // 4 bytes
-	uint64_t timestamp;		  // 8 bytes
-	char data[32];			  // Fixed-length for simplicity
+	uint32_t sequence_number;
+	uint64_t timestamp;
+	uint16_t adc[3];
 };
 
 char json_payload[128];
@@ -28,21 +28,24 @@ bool send_udp_packet_callback(__unused struct repeating_timer *t)
 	struct udp_pcb *pcb = *(struct udp_pcb **)t->user_data;
 
 	adc_select_input(0);
-	uint16_t result = adc_read();
+	payload.adc[0] = adc_read();
+	adc_select_input(1);
+	payload.adc[1] = adc_read();
+	adc_select_input(2);
+	payload.adc[2] = adc_read();
 
 	// Update payload
 	payload.sequence_number = sequence_number++;
 	payload.timestamp = time_us_64();
-	snprintf(payload.data, sizeof(payload.data), "%d", result);
 
 	// Format payload as JSON
-	int json_length = snprintf(json_payload, sizeof(json_payload), "{\"sequence_number\":%u,\"timestamp\":%llu,\"data\":\"%s\"}",
-							   payload.sequence_number, payload.timestamp, payload.data);
+	int json_length = snprintf(json_payload, sizeof(json_payload), "{\"sequence_number\":%u,\"timestamp\":%llu,\"adc\":[%u,%u,%u]}",
+							   payload.sequence_number, payload.timestamp, payload.adc[0], payload.adc[1], payload.adc[2]);
 
 	// Allocate pbuf and copy JSON payload
 	struct pbuf *p = pbuf_alloc(PBUF_TRANSPORT, json_length, PBUF_RAM);
 
-	memcpy(p->payload, json_payload, json_length); 
+	memcpy(p->payload, json_payload, json_length);
 
 	// Send UDP packet
 	err_t er = udp_sendto(pcb, p, &ip, port);
@@ -59,7 +62,7 @@ int main()
 	struct udp_pcb *pcb = udp_new();
 	udp_bind(pcb, IP_ADDR_ANY, 8080);
 
-	IP4_ADDR(&ip, 192, 168, 15, 104);
+	IP4_ADDR(&ip, 192, 168, 1, 204);
 
 	udp_connect(pcb, &ip, port);
 
@@ -69,10 +72,9 @@ int main()
 	adc_gpio_init(28);
 
 	struct repeating_timer timer;
-	add_repeating_timer_ms(1, send_udp_packet_callback, &pcb, &timer); // Set to 1 ms for high frequency
+	add_repeating_timer_ms(10, send_udp_packet_callback, &pcb, &timer);
 
 	while (true)
 	{
-		// No wait here, sending packets as fast as possible
 	}
 }
