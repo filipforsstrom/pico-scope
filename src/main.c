@@ -28,7 +28,7 @@ bool send_udp_packet_callback(__unused struct repeating_timer *t)
 	return true;
 }
 
-void updatePayload(struct http_connectionState *cs)
+void updatePayload(struct ws_connectionState *cs)
 {
 	adc_select_input(0);
 	payload.adc[0] = adc_read();
@@ -39,10 +39,18 @@ void updatePayload(struct http_connectionState *cs)
 
 	payload.timestamp = time_us_64();
 
-	int json_length = snprintf(json_payload, sizeof(json_payload), "{\timestamp\":%llu,\"adc\":[%u,%u,%u]}",
+	int json_length = snprintf(json_payload, sizeof(json_payload), "{\"timestamp\":%llu,\"adc\":[%u,%u,%u]}",
 							   payload.timestamp, payload.adc[0], payload.adc[1], payload.adc[2]);
 
 	cs->sendData = json_payload;
+}
+
+bool send_ws_callback(__unused struct repeating_timer *t)
+{
+	struct ws_connectionState *cs = *(struct ws_connectionState **)t->user_data;
+	updatePayload(cs);
+	cs->state = WS_SENDING;
+	return true;
 }
 
 int main()
@@ -71,25 +79,6 @@ int main()
 	}
 	printf("Buffer=%s\n", myBuff1);
 
-	// while (true)
-	// {
-	// 	char openHeader[] = "PUT /sensor HTTP/1.1\r\nHOST:192.168.1.204\r\nConnection: close\r\n\r\n";
-	// 	cs = doRequest(&ip, &hostname, port, openHeader, "", myBuff1);
-	// 	while (pollRequest(&cs))
-	// 	{
-	// 		sleep_ms(200);
-	// 	}
-	// 	printf("Buffer=%s\n", myBuff1);
-	// }
-
-	// char wsHeader[] = "GET /ws HTTP/1.1\r\n"
-	// 				  "Host: 192.168.1.204\r\n"
-	// 				  "Upgrade: websocket\r\n"
-	// 				  "Connection: Upgrade\r\n"
-	// 				  "Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==\r\n"
-	// 				  "Sec-WebSocket-Version: 13\r\n\r\n";
-	// cs = doWsUpgradeRequest(&ip, hostname, port, wsHeader, "", myBuff1);
-
 	struct ws_connectionState *ws_cs = ws_doWsHandshakeRequest(&ip, hostname, port, myBuff1);
 
 	while (ws_pollRequest(&ws_cs))
@@ -99,25 +88,13 @@ int main()
 	printf("Buffer=%s\n", myBuff1);
 
 	ws_cs = ws_dataTransfer(&ws_cs);
+	add_repeating_timer_ms(10, send_ws_callback, &ws_cs, &timer);
 
 	while (ws_pollRequest(&ws_cs))
 	{
-		// updatePayload(http_cs);
-		sleep_ms(200);
+		// updatePayload(ws_cs);
+		// sleep_ms(200);
 	}
-
-	// cs = doRequest(&ip, hostname, port, NULL, NULL, myBuff1);
-
-	// add_repeating_timer_ms(10, send_udp_packet_callback, &cs, &timer);
-
-	// cs = doWsRequest(&ip, hostname, port, NULL, NULL, myBuff1);
-
-	// while (pollRequest(&cs))
-	// {
-	// 	printf("State: %d\n", cs->state);
-	// 	updatePayload(cs);
-	// 	sleep_ms(200);
-	// }
 
 	cyw43_arch_deinit();
 	return 0;

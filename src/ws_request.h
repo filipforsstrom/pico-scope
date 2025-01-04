@@ -13,6 +13,7 @@ enum ws_states
 	WS_UPGRADING,
 	WS_UPGRADED,
 	WS_SENDING,
+	WS_WAITING,
 	WS_REQUEST_PENDING,
 	WS_INITIAL_DATA_PACKET,
 	WS_WAITING_MORE_DATA,
@@ -30,7 +31,7 @@ struct ws_connectionState
 
 err_t ws_sent(void *arg, struct altcp_pcb *pcb, u16_t len)
 {
-	printf("data sent %d\n", len);
+	// printf("data sent %d\n", len);
 }
 
 err_t ws_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err)
@@ -137,35 +138,6 @@ void ws_err(void *arg, err_t err)
 	}
 }
 
-// struct ws_connectionState *newConnection(char *sendData, char *recvData)
-// {
-// 	struct ws_connectionState *cs = (struct ws_connectionState *)malloc(sizeof(struct ws_connectionState));
-// 	cs->state = WS_NOT_CONNECTED;
-// 	cs->pcb = altcp_new(NULL);
-// 	altcp_recv(cs->pcb, ws_recv);
-// 	altcp_sent(cs->pcb, ws_sent);
-// 	altcp_err(cs->pcb, ws_err);
-// 	altcp_poll(cs->pcb, ws_poll, 10);
-// 	altcp_arg(cs->pcb, cs);
-// 	cs->sendData = sendData;
-// 	cs->recvData = recvData;
-// 	cs->start = 0;
-// 	return cs;
-// }
-
-// struct ws_connectionState *ws_doRequest(ip_addr_t *ip, char *host, u16_t port, char *header, char *sendData, char *recvData)
-// {
-// 	int len = strlen(header) + strlen(sendData);
-// 	char *requestData = malloc(len + 1);
-// 	snprintf(requestData, len + 1, "%s%s", header, sendData);
-// 	struct ws_connectionState *cs = newConnection(requestData, recvData);
-// 	cyw43_arch_lwip_begin();
-// 	err_t err = altcp_connect(cs->pcb, ip, port, ws_connected);
-// 	cyw43_arch_lwip_end();
-// 	cs->state = WS_CONNECTING;
-// 	return cs;
-// }
-
 struct ws_connectionState *ws_newWsUpgradeConnection(char *sendData, char *recvData)
 {
 	struct ws_connectionState *cs = (struct ws_connectionState *)malloc(sizeof(struct ws_connectionState));
@@ -200,34 +172,6 @@ struct ws_connectionState *ws_doWsHandshakeRequest(ip_addr_t *ip, char *host, u1
 	return cs;
 }
 
-// struct ws_connectionState *ws_newWsConnection(char *sendData, char *recvData)
-// {
-// 	struct ws_connectionState *cs = (struct ws_connectionState *)malloc(sizeof(struct ws_connectionState));
-// 	cs->pcb = altcp_new(NULL);
-// 	altcp_recv(cs->pcb, ws_wsRecv);
-// 	altcp_sent(cs->pcb, ws_sent);
-// 	altcp_err(cs->pcb, ws_err);
-// 	// altcp_poll(cs->pcb, poll, 10);
-// 	altcp_arg(cs->pcb, cs);
-// 	cs->sendData = sendData;
-// 	cs->recvData = recvData;
-// 	cs->start = 0;
-// 	return cs;
-// }
-
-// struct ws_connectionState *ws_doWsRequest(ip_addr_t *ip, char *host, u16_t port, char *header, char *sendData, char *recvData)
-// {
-// 	int len = strlen(header) + strlen(sendData);
-// 	char *requestData = malloc(len + 1);
-// 	snprintf(requestData, len + 1, "%s%s", header, sendData);
-// 	struct ws_connectionState *cs = ws_newWsConnection(requestData, recvData);
-// 	cyw43_arch_lwip_begin();
-// 	err_t err = altcp_connect(cs->pcb, ip, port, NULL);
-// 	cyw43_arch_lwip_end();
-// 	cs->state = WS_SENDING;
-// 	return cs;
-// }
-
 struct ws_connectionState *ws_dataTransfer(struct ws_connectionState **pcs)
 {
 	if (*pcs == NULL)
@@ -253,9 +197,8 @@ int ws_pollRequest(struct ws_connectionState **pcs)
 	case WS_UPGRADED:
 		return 0;
 	case WS_SENDING:
-		printf("Sending WebSocket frame\n");
-		char data[32];
-		snprintf(data, sizeof(data), "%f", 3.0);
+		char data[80];
+		snprintf(data, sizeof(data), "%s", cs->sendData);
 		char frame[256];
 		size_t frameSize;
 		ws_createWebSocketFrame(data, frame, &frameSize);
@@ -266,7 +209,9 @@ int ws_pollRequest(struct ws_connectionState **pcs)
 		{
 			printf("Error sending WebSocket frame: %d\n", err);
 		}
+		cs->state = WS_WAITING;
 		break;
+	case WS_WAITING:
 	case WS_REQUEST_PENDING:
 		break;
 	case WS_CONNECTED:
