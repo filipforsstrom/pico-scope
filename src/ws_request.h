@@ -4,13 +4,13 @@
 #include <stdint.h>
 #include "pico/cyw43_arch.h"
 #include "lwip/altcp.h"
+#include "debug.h"
 
 enum ws_states
 {
 	WS_NOT_CONNECTED = 0,
 	WS_CONNECTING,
 	WS_CONNECTED,
-	WS_UPGRADING,
 	WS_UPGRADED,
 	WS_SENDING,
 	WS_WAITING,
@@ -31,30 +31,7 @@ struct ws_connectionState
 
 err_t ws_sent(void *arg, struct altcp_pcb *pcb, u16_t len)
 {
-	// printf("data sent %d\n", len);
-}
-
-err_t ws_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err)
-{
-	struct ws_connectionState *cs = (struct ws_connectionState *)arg;
-	if (p != NULL)
-	{
-		printf("recv total %d  this buffer %d next %d err %d\n", p->tot_len, p->len, p->next, err);
-		if ((p->tot_len) > 2)
-		{
-			pbuf_copy_partial(p, (cs->recvData) + (cs->start), p->tot_len, 0);
-			cs->start += p->tot_len;
-			cs->recvData[cs->start] = 0;
-			// cs->state = WS_INITIAL_DATA_PACKET;
-			altcp_recved(pcb, p->tot_len);
-		}
-		pbuf_free(p);
-	}
-	else
-	{
-		// cs->state = WS_DATA_READY;
-	}
-	return ERR_OK;
+	DEBUG_PRINTF("ws sent %d\n", len);
 }
 
 void ws_createWebSocketFrame(const char *data, char *frame, size_t *frameSize)
@@ -83,6 +60,7 @@ void ws_createWebSocketFrame(const char *data, char *frame, size_t *frameSize)
 
 err_t ws_wsUpgradeRecv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err)
 {
+	DEBUG_PRINTF("ws upgrade recv\n");
 	struct ws_connectionState *cs = (struct ws_connectionState *)arg;
 	if (p != NULL)
 	{
@@ -97,11 +75,10 @@ err_t ws_wsUpgradeRecv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t e
 			// Check for "101 Switching Protocols"
 			if (strncmp(cs->recvData, "HTTP/1.1 101", 12) == 0)
 			{
-				printf("Switching to WebSocket\n");
 				cs->state = WS_UPGRADED;
 			}
 		}
-		// pbuf_free(p);
+		pbuf_free(p);
 	}
 	else
 	{
@@ -110,14 +87,15 @@ err_t ws_wsUpgradeRecv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t e
 	return ERR_OK;
 }
 
-err_t ws_wsRecv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err)
+err_t ws_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err)
 {
-	printf("wsRecv\n");
+	DEBUG_PRINTF("ws recv\n");
 	return ERR_OK;
 }
 
 static err_t ws_connected(void *arg, struct altcp_pcb *pcb, err_t err)
 {
+	DEBUG_PRINTF("ws connected\n");
 	struct ws_connectionState *cs = (struct ws_connectionState *)arg;
 	cs->state = WS_CONNECTED;
 	return ERR_OK;
@@ -125,9 +103,8 @@ static err_t ws_connected(void *arg, struct altcp_pcb *pcb, err_t err)
 
 err_t ws_poll(void *arg, struct altcp_pcb *pcb)
 {
-	printf("Connection Closed \n");
-	struct ws_connectionState *cs = (struct ws_connectionState *)arg;
-	// cs->state = WS_DATA_READY;
+	DEBUG_PRINTF("ws poll \n");
+	return ERR_OK;
 }
 
 void ws_err(void *arg, err_t err)
@@ -168,7 +145,6 @@ struct ws_connectionState *ws_doWsHandshakeRequest(ip_addr_t *ip, char *host, u1
 	cyw43_arch_lwip_begin();
 	err_t err = altcp_connect(cs->pcb, ip, port, ws_connected);
 	cyw43_arch_lwip_end();
-	cs->state = WS_UPGRADING;
 	return cs;
 }
 
@@ -177,7 +153,7 @@ struct ws_connectionState *ws_dataTransfer(struct ws_connectionState **pcs)
 	if (*pcs == NULL)
 		return 0;
 	struct ws_connectionState *cs = *pcs;
-	// TODO: Update pcb with suitable callbacks
+	// altcp_recv(cs->pcb, ws_recv); // TODO: Check if this works
 	cs->state = WS_SENDING;
 	return cs;
 }
@@ -192,8 +168,6 @@ int ws_pollRequest(struct ws_connectionState **pcs)
 	{
 	case WS_NOT_CONNECTED:
 	case WS_CONNECTING:
-	case WS_UPGRADING:
-		break;
 	case WS_UPGRADED:
 		return 0;
 	case WS_SENDING:
@@ -203,23 +177,22 @@ int ws_pollRequest(struct ws_connectionState **pcs)
 		size_t frameSize;
 		ws_createWebSocketFrame(data, frame, &frameSize);
 
-		err_t err = altcp_write(cs->pcb, frame, frameSize, 0);
-		// err = altcp_output(cs->pcb); //?
-		if (err != ERR_OK)
-		{
-			printf("Error sending WebSocket frame: %d\n", err);
-		}
+		cyw43_arch_lwip_begin();
+		err = altcp_write(cs->pcb, frame, frameSize, 0);
+		err = altcp_output(cs->pcb);
+		cyw43_arch_lwip_end();
+
 		cs->state = WS_WAITING;
 		break;
 	case WS_WAITING:
 	case WS_REQUEST_PENDING:
 		break;
 	case WS_CONNECTED:
-		cs->state = WS_REQUEST_PENDING;
 		cyw43_arch_lwip_begin();
 		err = altcp_write(cs->pcb, cs->sendData, strlen(cs->sendData), 0);
 		err = altcp_output(cs->pcb);
 		cyw43_arch_lwip_end();
+		cs->state = WS_REQUEST_PENDING;
 		break;
 	case WS_INITIAL_DATA_PACKET:
 		cs->state = WS_WAITING_MORE_DATA;

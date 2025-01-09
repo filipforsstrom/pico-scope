@@ -7,9 +7,13 @@
 
 #include "http_request.h"
 #include "ws_request.h"
+#include "memory.h"
+#include "debug.h"
 
 #define BUF_SIZE 4096
 char myBuff1[BUF_SIZE];
+
+#define SPEED 10
 
 struct Payload
 {
@@ -88,7 +92,7 @@ int main()
 	printf("Buffer=%s\n", myBuff1);
 
 	ws_cs = ws_dataTransfer(&ws_cs);
-	add_repeating_timer_ms(10, send_ws_callback, &ws_cs, &timer);
+	add_repeating_timer_ms(SPEED, send_ws_callback, &ws_cs, &timer);
 
 	while (ws_pollRequest(&ws_cs))
 	{
