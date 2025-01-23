@@ -2,7 +2,7 @@
 #define DEBUG_H
 
 #ifndef DEBUG_PRINT
-#define DEBUG_PRINT 1 // Default to off if not defined
+#define DEBUG_PRINT 0 // Set to 0 to turn off debug print
 #endif
 
 #if DEBUG_PRINT

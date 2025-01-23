@@ -111,6 +111,20 @@
 				"init; reset; exit"
 			],
 			"problemMatcher": []
+		},
+		{
+			"label": "Cppcheck",
+			"type": "shell",
+			"command": "cppcheck",
+			"args": [
+				"--enable=all",
+				"--inconclusive",
+				"--quiet",
+				"--error-exitcode=1",
+				"${workspaceFolder}"
+			],
+			"problemMatcher": [],
+			"dependsOn": "Build"
 		}
 	]
 }

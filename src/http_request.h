@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "pico/cyw43_arch.h"
 #include "lwip/altcp.h"
+#include "debug.h"
 
 enum http_states
 {
@@ -27,7 +28,7 @@ struct http_connectionState
 
 err_t http_sent(void *arg, struct altcp_pcb *pcb, u16_t len)
 {
-	printf("data sent %d\n", len);
+	DEBUG_PRINTF("data sent %d\n", len);
 }
 
 err_t http_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err)
@@ -55,6 +56,7 @@ err_t http_recv(void *arg, struct altcp_pcb *pcb, struct pbuf *p, err_t err)
 
 static err_t http_connected(void *arg, struct altcp_pcb *pcb, err_t err)
 {
+	DEBUG_PRINTF("http connected\n");
 	struct http_connectionState *cs = (struct http_connectionState *)arg;
 	cs->state = HTTP_CONNECTED;
 	return ERR_OK;
@@ -62,7 +64,7 @@ static err_t http_connected(void *arg, struct altcp_pcb *pcb, err_t err)
 
 err_t http_poll(void *arg, struct altcp_pcb *pcb)
 {
-	printf("Connection Closed \n");
+	DEBUG_PRINTF("Connection Closed \n");
 	struct http_connectionState *cs = (struct http_connectionState *)arg;
 	cs->state = HTTP_DATA_READY;
 }
@@ -73,6 +75,12 @@ void http_err(void *arg, err_t err)
 	{
 		printf("client_err %d\n", err);
 	}
+
+	// struct http_connectionState *cs = (struct http_connectionState *)arg;
+	// if (cs->state == HTTP_CONNECTING)
+	// {
+	// }
+	// cs->state = HTTP_FAILED_TO_CONNECT;
 }
 
 struct http_connectionState *http_newConnection(char *sendData, char *recvData)

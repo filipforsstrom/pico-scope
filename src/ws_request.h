@@ -122,7 +122,6 @@ struct ws_connectionState *ws_newWsUpgradeConnection(char *sendData, char *recvD
 	altcp_recv(cs->pcb, ws_wsUpgradeRecv);
 	altcp_sent(cs->pcb, ws_sent);
 	altcp_err(cs->pcb, ws_err);
-	// altcp_poll(cs->pcb, poll, 10);
 	altcp_arg(cs->pcb, cs);
 	cs->sendData = sendData;
 	cs->recvData = recvData;
@@ -153,7 +152,7 @@ struct ws_connectionState *ws_dataTransfer(struct ws_connectionState **pcs)
 	if (*pcs == NULL)
 		return 0;
 	struct ws_connectionState *cs = *pcs;
-	// altcp_recv(cs->pcb, ws_recv); // TODO: Check if this works
+	altcp_recv(cs->pcb, ws_recv); // TODO: Check if this works
 	cs->state = WS_SENDING;
 	return cs;
 }
